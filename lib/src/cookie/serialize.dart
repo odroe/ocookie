@@ -1,3 +1,5 @@
+import 'package:http_parser/http_parser.dart' show formatHttpDate;
+
 /// Enum representing the priority levels for a cookie.
 enum CookiePriority {
   /// Low priority.
@@ -121,4 +123,84 @@ class CookieSerializeOptions {
   ///
   /// More information can be found in the [proposal](https://github.com/privacycg/CHIPS).
   final bool? partitioned;
+}
+
+final _cookieAllowPattern = RegExp(r"^[!#\$%&'\*\+\-\.0-9A-Za-z\^_\`\|~]+$");
+
+String serializeCookie(
+  String name,
+  String value, [
+  CookieSerializeOptions? options,
+]) {
+  final encode = options?.encode ?? Uri.encodeComponent;
+  if (!_cookieAllowPattern.hasMatch(name)) {
+    throw ArgumentError.value(name, 'name', 'argument name is invalid');
+  }
+
+  final encodedValue = encode(value);
+  if (encodedValue.isNotEmpty && !_cookieAllowPattern.hasMatch(encodedValue)) {
+    throw StateError('encoded value is invalid');
+  }
+
+  final result = StringBuffer(name)
+    ..write('=')
+    ..write(encodedValue);
+
+  if (options?.maxAge != null) {
+    result
+      ..write('; Max-Age=')
+      ..write(options!.maxAge!.inSeconds);
+  }
+  if (options?.domain?.isNotEmpty == true) {
+    result
+      ..write('; Domain=')
+      ..write(options!.domain);
+  }
+  if (options?.path?.isNotEmpty == true) {
+    final trimedPath = options!.path!.replaceAll('/', '');
+    if (trimedPath.isNotEmpty && !_cookieAllowPattern.hasMatch(trimedPath)) {
+      throw ArgumentError.value(
+          options.path, 'path', 'options path is invalid');
+    }
+
+    result
+      ..write('; Path=')
+      ..write(options.path);
+  }
+  if (options?.expires != null) {
+    result
+      ..write('; Expires=')
+      ..write(formatHttpDate(options!.expires!));
+  }
+  if (options?.httpOnly == true) {
+    result.write('; HttpOnly');
+  }
+  if (options?.secure == true) {
+    result.write('; Secure');
+  }
+  if (options?.priority != null) {
+    final value = switch (options!.priority!) {
+      CookiePriority.low => 'Low',
+      CookiePriority.medium => 'Medium',
+      CookiePriority.high => 'High',
+    };
+    result
+      ..write('; Priority=')
+      ..write(value);
+  }
+  if (options?.sameSite != null) {
+    final value = switch (options!.sameSite!) {
+      CookieSameSite.strict => 'Strict',
+      CookieSameSite.lax => 'Lax',
+      CookieSameSite.none => 'None',
+    };
+    result
+      ..write('; SameSite=')
+      ..write(value);
+  }
+  if (options?.partitioned == true) {
+    result.write('; Partitioned');
+  }
+
+  return result.toString();
 }
