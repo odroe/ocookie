@@ -1,6 +1,6 @@
 name: ocookie
 description: Cookie and Set-Cookie parser and serializer.
-version: 0.0.0
+version: 0.0.1
 repository: https://github.com/odroe/ocookie
 
 environment:
