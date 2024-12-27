@@ -100,6 +100,9 @@ class Cookie {
         throw ArgumentError.value(path, 'path', 'path is invalid');
       }
     }
+    if (domain?.isNotEmpty == true && !cookieAllowPattern.hasMatch(domain!)) {
+      throw ArgumentError.value(domain, 'domain', 'domain is invalid');
+    }
     if (sameSite == CookieSameSite.strict && secure != true) {
       throw StateError(
           'SameSite attribute is set to strict, but the secure flag is not set to true.');
@@ -130,6 +133,9 @@ class Cookie {
 
     return parts.join('; ');
   }
+
+  @override
+  String toString() => serialize();
 
   factory Cookie.fromString(String setCookie, {CookieCodec? decode}) {
     decode = (decode ?? defaultDecode).tryRun;
@@ -197,9 +203,9 @@ class Cookie {
 
       final key = cookies.substring(index, eq).trim();
       if (!result.containsKey(key) && (filter == null || filter(key))) {
-        String value = cookies.substring(eq + 1, end);
+        String value = cookies.substring(eq + 1, end).trim();
         if (value.startsWith('"')) {
-          value = value.substring(1, value.length - 1);
+          value = value.substring(1, value.length - 1).trim();
         }
 
         result[key] = decode(value);
@@ -211,7 +217,7 @@ class Cookie {
     return result;
   }
 
-  List<String> splitSetCookie(String cookies) {
+  static List<String> splitSetCookie(String cookies) {
     final result = <String>[];
     int pos = 0;
     int start;
