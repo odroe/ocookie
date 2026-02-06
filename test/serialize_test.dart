@@ -41,6 +41,20 @@ void main() {
       );
     });
 
+    test('should throw when Partitioned without Secure', () {
+      expect(
+        () => Cookie('foo', 'bar', partitioned: true).serialize(),
+        throwsA(isA<StateError>()),
+      );
+    });
+
+    test('should serialize Partitioned with Secure', () {
+      expect(
+        Cookie('foo', 'bar', partitioned: true, secure: true).serialize(),
+        'foo=bar; Secure; Partitioned',
+      );
+    });
+
     test('should throw for invalid name', () {
       expect(
         () => Cookie('name\n', 'value').serialize(),

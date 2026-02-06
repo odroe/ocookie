@@ -164,6 +164,10 @@ class Cookie {
       throw StateError(
           'SameSite attribute is set to none, but the secure flag is not set to true.');
     }
+    if (partitioned == true && secure != true) {
+      throw StateError(
+          'Partitioned attribute is set, but the secure flag is not set to true.');
+    }
 
     final parts = <String>[
       '$name=$encodedValue',
