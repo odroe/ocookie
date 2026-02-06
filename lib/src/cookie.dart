@@ -196,6 +196,38 @@ class Cookie {
   }
 
   @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is Cookie &&
+          runtimeType == other.runtimeType &&
+          name == other.name &&
+          value == other.value &&
+          expires == other.expires &&
+          domain == other.domain &&
+          httpOnly == other.httpOnly &&
+          maxAge == other.maxAge &&
+          path == other.path &&
+          priority == other.priority &&
+          sameSite == other.sameSite &&
+          secure == other.secure &&
+          partitioned == other.partitioned;
+
+  @override
+  int get hashCode => Object.hash(
+        name,
+        value,
+        expires,
+        domain,
+        httpOnly,
+        maxAge,
+        path,
+        priority,
+        sameSite,
+        secure,
+        partitioned,
+      );
+
+  @override
   String toString() => serialize();
 
   factory Cookie.fromString(String setCookie, {CookieCodec? decode}) {

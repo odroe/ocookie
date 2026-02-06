@@ -86,4 +86,26 @@ void main() {
       );
     });
   });
+
+  group('Cookie equality', () {
+    test('should compare by value', () {
+      final a = Cookie(
+        'sid',
+        'abc',
+        path: '/',
+        secure: true,
+        sameSite: CookieSameSite.none,
+      );
+      final b = Cookie(
+        'sid',
+        'abc',
+        path: '/',
+        secure: true,
+        sameSite: CookieSameSite.none,
+      );
+
+      expect(a, equals(b));
+      expect(a.hashCode, b.hashCode);
+    });
+  });
 }
