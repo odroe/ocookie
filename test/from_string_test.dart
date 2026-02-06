@@ -45,6 +45,20 @@ void main() {
 
       expect(cookie.value, 'hello world');
     });
+
+    test('should throw for invalid first pair without equals', () {
+      expect(
+        () => Cookie.fromString('HttpOnly; Path=/'),
+        throwsArgumentError,
+      );
+    });
+
+    test('should throw for empty cookie name', () {
+      expect(
+        () => Cookie.fromString('=value; Path=/'),
+        throwsArgumentError,
+      );
+    });
   });
 
   group('Cookie.splitSetCookie', () {

@@ -28,7 +28,22 @@ enum CookieSameSite {
   none
 }
 
+/// Nullable fields supported by [Cookie.copyWith.clear].
+enum CookieNullableField {
+  expires,
+  domain,
+  httpOnly,
+  maxAge,
+  path,
+  priority,
+  sameSite,
+  secure,
+  partitioned,
+}
+
 class Cookie {
+  static const Set<CookieNullableField> _noClearedFields = {};
+
   const Cookie(
     this.name,
     this.value, {
@@ -67,19 +82,64 @@ class Cookie {
     CookieSameSite? sameSite,
     bool? secure,
     bool? partitioned,
+    Set<CookieNullableField> clear = _noClearedFields,
   }) {
+    void assertNoConflict(
+      CookieNullableField field,
+      Object? value,
+      String paramName,
+    ) {
+      if (clear.contains(field) && value != null) {
+        throw ArgumentError.value(
+          value,
+          paramName,
+          'cannot set and clear the same field',
+        );
+      }
+    }
+
+    assertNoConflict(CookieNullableField.expires, expires, 'expires');
+    assertNoConflict(CookieNullableField.domain, domain, 'domain');
+    assertNoConflict(CookieNullableField.httpOnly, httpOnly, 'httpOnly');
+    assertNoConflict(CookieNullableField.maxAge, maxAge, 'maxAge');
+    assertNoConflict(CookieNullableField.path, path, 'path');
+    assertNoConflict(CookieNullableField.priority, priority, 'priority');
+    assertNoConflict(CookieNullableField.sameSite, sameSite, 'sameSite');
+    assertNoConflict(CookieNullableField.secure, secure, 'secure');
+    assertNoConflict(
+      CookieNullableField.partitioned,
+      partitioned,
+      'partitioned',
+    );
+
     return Cookie(
       name ?? this.name,
       value ?? this.value,
-      expires: expires ?? this.expires,
-      domain: domain ?? this.domain,
-      httpOnly: httpOnly ?? this.httpOnly,
-      maxAge: maxAge ?? this.maxAge,
-      path: path ?? this.path,
-      priority: priority ?? this.priority,
-      sameSite: sameSite ?? this.sameSite,
-      secure: secure ?? this.secure,
-      partitioned: partitioned ?? this.partitioned,
+      expires: clear.contains(CookieNullableField.expires)
+          ? null
+          : expires ?? this.expires,
+      domain: clear.contains(CookieNullableField.domain)
+          ? null
+          : domain ?? this.domain,
+      httpOnly: clear.contains(CookieNullableField.httpOnly)
+          ? null
+          : httpOnly ?? this.httpOnly,
+      maxAge: clear.contains(CookieNullableField.maxAge)
+          ? null
+          : maxAge ?? this.maxAge,
+      path: clear.contains(CookieNullableField.path) ? null : path ?? this.path,
+      priority: clear.contains(CookieNullableField.priority)
+          ? null
+          : priority ?? this.priority,
+      sameSite: clear.contains(CookieNullableField.sameSite)
+          ? null
+          : sameSite ?? this.sameSite,
+      secure: clear.contains(CookieNullableField.secure)
+          ? null
+          : secure ?? this.secure,
+      partitioned: clear.contains(CookieNullableField.partitioned)
+          ? null
+          : partitioned ?? this.partitioned,
     );
   }
 
@@ -167,7 +227,24 @@ class Cookie {
       return value;
     }
 
-    final (name, rawValue) = parseCookieNameValue(parts.first);
+    final firstPair = parts.first;
+    if (!firstPair.contains('=')) {
+      throw ArgumentError.value(
+        setCookie,
+        'setCookie',
+        'set-cookie must start with a name=value pair',
+      );
+    }
+
+    final (name, rawValue) = parseCookieNameValue(firstPair);
+    if (name.isEmpty) {
+      throw ArgumentError.value(
+        setCookie,
+        'setCookie',
+        'cookie name is empty',
+      );
+    }
+
     var cookie = Cookie(name, decode(unwrapQuotedValue(rawValue)));
     for (final pair in parts.skip(1)) {
       final [name, ...values] = pair.split('=');
