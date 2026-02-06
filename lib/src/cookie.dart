@@ -382,6 +382,19 @@ class Cookie {
       return ch != '=' && ch != ';' && ch != ',';
     }
 
+    String sanitizeCookiePart(String value) {
+      var sanitized = value.trim();
+      while (sanitized.isNotEmpty &&
+          (sanitized.endsWith(',') ||
+              whitespacePattern.hasMatch(
+                sanitized[sanitized.length - 1],
+              ))) {
+        sanitized = sanitized.substring(0, sanitized.length - 1).trimRight();
+      }
+
+      return sanitized;
+    }
+
     while (pos < cookies.length) {
       start = pos;
       cookiesSeparatorFound = false;
@@ -403,7 +416,7 @@ class Cookie {
         }
 
         if (pos < cookies.length && cookies[pos] == '=') {
-          final value = cookies.substring(start, lastComma).trim();
+          final value = sanitizeCookiePart(cookies.substring(start, lastComma));
           if (value.isNotEmpty) {
             result.add(value);
           }
@@ -415,7 +428,7 @@ class Cookie {
       }
 
       if (!cookiesSeparatorFound || pos >= cookies.length) {
-        final value = cookies.substring(start).trim();
+        final value = sanitizeCookiePart(cookies.substring(start));
         if (value.isNotEmpty) {
           result.add(value);
         }

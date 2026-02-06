@@ -81,5 +81,14 @@ void main() {
         'c=d',
       ]);
     });
+
+    test('should ignore redundant separators and trailing commas', () {
+      final values = Cookie.splitSetCookie('a=b,, c=d, ');
+
+      expect(values, [
+        'a=b',
+        'c=d',
+      ]);
+    });
   });
 }
