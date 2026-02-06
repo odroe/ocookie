@@ -162,8 +162,16 @@ class Cookie {
       return Duration(seconds: seconds);
     }
 
-    final (name, value) = parseCookieNameValue(parts.first);
-    var cookie = Cookie(name, decode(value));
+    String unwrapQuotedValue(String value) {
+      if (value.length >= 2 && value.startsWith('"') && value.endsWith('"')) {
+        return value.substring(1, value.length - 1);
+      }
+
+      return value;
+    }
+
+    final (name, rawValue) = parseCookieNameValue(parts.first);
+    var cookie = Cookie(name, decode(unwrapQuotedValue(rawValue)));
     for (final pair in parts.skip(1)) {
       final [name, ...values] = pair.split('=');
       final value = values.join('=').trim();
@@ -285,7 +293,10 @@ class Cookie {
         }
 
         if (pos < cookies.length && cookies[pos] == '=') {
-          result.add(cookies.substring(start, lastComma));
+          final value = cookies.substring(start, lastComma).trim();
+          if (value.isNotEmpty) {
+            result.add(value);
+          }
           start = pos = nextStart;
           cookiesSeparatorFound = true;
         } else {
@@ -294,7 +305,10 @@ class Cookie {
       }
 
       if (!cookiesSeparatorFound || pos >= cookies.length) {
-        result.add(cookies.substring(start));
+        final value = cookies.substring(start).trim();
+        if (value.isNotEmpty) {
+          result.add(value);
+        }
       }
     }
 

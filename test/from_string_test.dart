@@ -39,6 +39,12 @@ void main() {
       expect(cookie.maxAge, isNull);
       expect(cookie.expires, isNull);
     });
+
+    test('should parse quoted cookie values', () {
+      final cookie = Cookie.fromString('a="hello%20world"');
+
+      expect(cookie.value, 'hello world');
+    });
   });
 
   group('Cookie.splitSetCookie', () {
@@ -50,6 +56,15 @@ void main() {
       expect(values, [
         'a=b; Expires=Wed, 21 Oct 2015 07:28:00 GMT',
         'c=d; Path=/',
+      ]);
+    });
+
+    test('should trim optional whitespace around each cookie value', () {
+      final values = Cookie.splitSetCookie('  a=b; Path=/  ,   c=d  ');
+
+      expect(values, [
+        'a=b; Path=/',
+        'c=d',
       ]);
     });
   });
