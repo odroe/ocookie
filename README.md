@@ -15,12 +15,22 @@ Alternatively, you can run the following command:
 dart pub add ocookie
 ```
 
-## Baisc Usage
+## Basic Usage
 
 ```dart
 final cookie = Cookie('name', 'value');
-print(cookie.serialize()) // name=value
+print(cookie.serialize()); // name=value
 print(Cookie.parse('a=b;b=c')); // {a: b, b: c}
+
+final setCookie = Cookie.fromString(
+  'sid=abc; Path=/; HttpOnly; Secure; SameSite=None',
+);
+print(setCookie.path); // /
+
+final values = Cookie.splitSetCookie(
+  'a=b; Expires=Wed, 21 Oct 2015 07:28:00 GMT, c=d; Path=/',
+);
+print(values); // [a=b; Expires=Wed, 21 Oct 2015 07:28:00 GMT, c=d; Path=/]
 ```
 
 ### Utils

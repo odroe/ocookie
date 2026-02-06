@@ -103,9 +103,9 @@ class Cookie {
     if (domain?.isNotEmpty == true && !cookieAllowPattern.hasMatch(domain!)) {
       throw ArgumentError.value(domain, 'domain', 'domain is invalid');
     }
-    if (sameSite == CookieSameSite.strict && secure != true) {
+    if (sameSite == CookieSameSite.none && secure != true) {
       throw StateError(
-          'SameSite attribute is set to strict, but the secure flag is not set to true.');
+          'SameSite attribute is set to none, but the secure flag is not set to true.');
     }
 
     final parts = <String>[
@@ -139,17 +139,37 @@ class Cookie {
 
   factory Cookie.fromString(String setCookie, {CookieCodec? decode}) {
     decode = (decode ?? defaultDecode).tryRun;
-    final parts =
-        setCookie.split(';').map((e) => e.trim()).where((e) => e.isNotEmpty);
+    final parts = setCookie
+        .split(';')
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toList(growable: false);
+    if (parts.isEmpty) {
+      throw ArgumentError.value(setCookie, 'setCookie', 'set-cookie is empty');
+    }
+
+    DateTime? parseExpiresValue(String value) {
+      try {
+        return parseHttpDate(value);
+      } catch (_) {
+        return null;
+      }
+    }
+
+    Duration? parseMaxAgeValue(String value) {
+      final seconds = int.tryParse(value);
+      if (seconds == null) return null;
+      return Duration(seconds: seconds);
+    }
+
     final (name, value) = parseCookieNameValue(parts.first);
     var cookie = Cookie(name, decode(value));
     for (final pair in parts.skip(1)) {
       final [name, ...values] = pair.split('=');
-      final value = values.join('=');
+      final value = values.join('=').trim();
       cookie = switch (name.trim().toLowerCase()) {
-        'expires' => cookie.copyWith(expires: parseHttpDate(value)),
-        'max-age' =>
-          cookie.copyWith(maxAge: Duration(seconds: int.parse(value))),
+        'expires' => cookie.copyWith(expires: parseExpiresValue(value)),
+        'max-age' => cookie.copyWith(maxAge: parseMaxAgeValue(value)),
         'secure' => cookie.copyWith(secure: true),
         'httponly' => cookie.copyWith(httpOnly: true),
         'partitioned' => cookie.copyWith(partitioned: true),
@@ -202,10 +222,15 @@ class Cookie {
       }
 
       final key = cookies.substring(index, eq).trim();
+      if (key.isEmpty) {
+        index = end + 1;
+        continue;
+      }
+
       if (!result.containsKey(key) && (filter == null || filter(key))) {
         String value = cookies.substring(eq + 1, end).trim();
-        if (value.startsWith('"')) {
-          value = value.substring(1, value.length - 1).trim();
+        if (value.length >= 2 && value.startsWith('"') && value.endsWith('"')) {
+          value = value.substring(1, value.length - 1);
         }
 
         result[key] = decode(value);

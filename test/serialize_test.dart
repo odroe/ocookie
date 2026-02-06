@@ -15,6 +15,32 @@ void main() {
       expect(Cookie('foo', '').serialize(), 'foo=');
     });
 
+    test('should allow SameSite=Strict without Secure', () {
+      expect(
+        Cookie('foo', 'bar', sameSite: CookieSameSite.strict).serialize(),
+        'foo=bar; SameSite=Strict',
+      );
+    });
+
+    test('should throw when SameSite=None without Secure', () {
+      expect(
+        () => Cookie('foo', 'bar', sameSite: CookieSameSite.none).serialize(),
+        throwsA(isA<StateError>()),
+      );
+    });
+
+    test('should serialize SameSite=None with Secure', () {
+      expect(
+        Cookie(
+          'foo',
+          'bar',
+          sameSite: CookieSameSite.none,
+          secure: true,
+        ).serialize(),
+        'foo=bar; Secure; SameSite=None',
+      );
+    });
+
     test('should throw for invalid name', () {
       expect(
         () => Cookie('name\n', 'value').serialize(),

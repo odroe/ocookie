@@ -47,6 +47,28 @@ void main() {
         {'foo': '', 'bar': 'bar'},
       );
     });
+
+    test('should ignore cookies with empty names', () {
+      expect(Cookie.parse('=bar;foo=baz'), {'foo': 'baz'});
+    });
+
+    test('should only unquote fully quoted values', () {
+      expect(
+        Cookie.parse('foo="bar";baz=1'),
+        {'foo': 'bar', 'baz': '1'},
+      );
+      expect(
+        Cookie.parse('foo="bar;baz=1'),
+        {'foo': '"bar', 'baz': '1'},
+      );
+    });
+
+    test('should not throw on malformed opening quote only', () {
+      expect(
+        Cookie.parse('foo=";bar=2'),
+        {'foo': '"', 'bar': '2'},
+      );
+    });
   });
 
   group('Cookie.parse with options', () {
