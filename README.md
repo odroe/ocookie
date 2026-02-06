@@ -36,9 +36,47 @@ print(values); // [a=b; Expires=Wed, 21 Oct 2015 07:28:00 GMT, c=d; Path=/]
 ### Utils
 
 - `Cookie.serialize` - Serialize a cookie instance to string.
+- `Cookie.validate` - Validate a cookie and return all errors.
 - `Cookie.parse` - Parse client-side `cookie` header map.
 - `Cookie.fromString` - Parse a set-cookie string to Cookie instance.
 - `Cookie.splitSetCookie` - Split a string of multiple set-cookie values into a set-cookie string list.
+
+## CopyWith And Clear
+
+```dart
+final original = Cookie(
+  'sid',
+  'abc',
+  path: '/demo',
+  secure: true,
+  sameSite: CookieSameSite.none,
+);
+
+final updated = original.copyWith(path: '/next');
+final cleared = original.copyWith(
+  clear: {CookieNullableField.path},
+);
+```
+
+## Validation
+
+```dart
+final cookie = Cookie(
+  'sid',
+  'abc',
+  sameSite: CookieSameSite.none,
+);
+
+final errors = cookie.validate();
+if (errors.isNotEmpty) {
+  print(errors);
+}
+```
+
+## Security Constraints
+
+- `SameSite=None` requires `Secure=true`.
+- `Partitioned=true` requires `Secure=true`.
 
 # API Reference
 

@@ -143,6 +143,48 @@ class Cookie {
     );
   }
 
+  /// Validates this cookie and returns all error messages.
+  ///
+  /// Returns an empty list when the cookie can be serialized safely.
+  List<String> validate({CookieCodec? encode}) {
+    final errors = <String>[];
+    encode ??= defaultEncode;
+
+    if (!cookieAllowPattern.hasMatch(name)) {
+      errors.add('argument name is invalid');
+    }
+
+    String encodedValue;
+    try {
+      encodedValue = encode(value);
+    } catch (error) {
+      errors.add('failed to encode value: $error');
+      return errors;
+    }
+
+    if (encodedValue.isNotEmpty && !cookieAllowPattern.hasMatch(encodedValue)) {
+      errors.add('encoded value is invalid');
+    }
+    if (path?.isNotEmpty == true && !isPathValueValid(path!)) {
+      errors.add('path is invalid');
+    }
+    if (domain?.isNotEmpty == true && !cookieAllowPattern.hasMatch(domain!)) {
+      errors.add('domain is invalid');
+    }
+    if (sameSite == CookieSameSite.none && secure != true) {
+      errors.add(
+        'SameSite attribute is set to none, but the secure flag is not set to true.',
+      );
+    }
+    if (partitioned == true && secure != true) {
+      errors.add(
+        'Partitioned attribute is set, but the secure flag is not set to true.',
+      );
+    }
+
+    return errors;
+  }
+
   String serialize({CookieCodec? encode}) {
     encode ??= defaultEncode;
 
