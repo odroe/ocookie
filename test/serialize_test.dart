@@ -77,6 +77,13 @@ void main() {
           );
         });
 
+        test('should allow legal special characters in path', () {
+          expect(
+            Cookie('a', 'b', path: '/v1:users?active=true').serialize(),
+            'a=b; Path=/v1:users?active=true',
+          );
+        });
+
         test('should throw for invalid value', () {
           expect(
             () => Cookie('a', 'b', path: '/demo\n').serialize(),

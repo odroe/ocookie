@@ -94,11 +94,8 @@ class Cookie {
     if (encodedValue.isNotEmpty && !cookieAllowPattern.hasMatch(encodedValue)) {
       throw StateError('encoded value is invalid');
     }
-    if (path?.isNotEmpty == true) {
-      final trimedPath = path!.replaceAll('/', '');
-      if (trimedPath.isNotEmpty && !cookieAllowPattern.hasMatch(trimedPath)) {
-        throw ArgumentError.value(path, 'path', 'path is invalid');
-      }
+    if (path?.isNotEmpty == true && !isPathValueValid(path!)) {
+      throw ArgumentError.value(path, 'path', 'path is invalid');
     }
     if (domain?.isNotEmpty == true && !cookieAllowPattern.hasMatch(domain!)) {
       throw ArgumentError.value(domain, 'domain', 'domain is invalid');
