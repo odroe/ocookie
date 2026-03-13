@@ -1,9 +1,21 @@
 ## 0.2.0
 
-- make `httpOnly`, `secure`, and `partitioned` two-state flags with `false` defaults
-- treat omitted flags and explicit `false` as the same value semantics
-- remove `CookieNullableField.httpOnly`, `CookieNullableField.secure`, and `CookieNullableField.partitioned`
-- migrate `copyWith(clear: {...})` call sites by dropping those removed fields and using omitted flags or explicit `false` instead
+### Breaking Changes
+
+- `Cookie.httpOnly`, `Cookie.secure`, and `Cookie.partitioned` are now two-state flags with `false` defaults.
+- Omitting those flags is now equivalent to setting them to `false`.
+- Removed `CookieNullableField.httpOnly`, `CookieNullableField.secure`, and `CookieNullableField.partitioned`.
+- Migrate `copyWith(clear: {...})` call sites by removing those deleted enum values and using omitted flags or explicit `false` instead.
+
+### Parser Behavior
+
+- `Cookie.fromString` now treats explicit `Secure=false`, `HttpOnly=false`, and `Partitioned=false` as disabled flags.
+- Expanded `Set-Cookie` compatibility coverage for repeated attributes, quoted values containing `=`, unknown attributes, and combined header splitting around quoted commas and `Expires` dates.
+
+### Tooling
+
+- Updated `lints` to `6.1.0`.
+- Updated `actions/checkout` to `v6`.
 
 ## 0.1.0
 
