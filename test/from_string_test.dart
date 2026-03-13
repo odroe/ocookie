@@ -79,15 +79,20 @@ void main() {
       expect(cookie.secure, isTrue);
     });
 
-    test('should treat valueless flags with non-standard values as enabled',
-        () {
-      final cookie = Cookie.fromString(
+    test('should treat non-standard flag values predictably', () {
+      final enabledCookie = Cookie.fromString(
         'sid=abc; Secure=1; HttpOnly=true; Partitioned=?1',
       );
+      final disabledCookie = Cookie.fromString(
+        'sid=abc; Secure=false; HttpOnly=false; Partitioned=false',
+      );
 
-      expect(cookie.secure, isTrue);
-      expect(cookie.httpOnly, isTrue);
-      expect(cookie.partitioned, isTrue);
+      expect(enabledCookie.secure, isTrue);
+      expect(enabledCookie.httpOnly, isTrue);
+      expect(enabledCookie.partitioned, isTrue);
+      expect(disabledCookie.secure, isFalse);
+      expect(disabledCookie.httpOnly, isFalse);
+      expect(disabledCookie.partitioned, isFalse);
     });
 
     test('should ignore invalid recognized attribute values without failing',

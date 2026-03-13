@@ -2,6 +2,8 @@
 
 - make `httpOnly`, `secure`, and `partitioned` two-state flags with `false` defaults
 - treat omitted flags and explicit `false` as the same value semantics
+- remove `CookieNullableField.httpOnly`, `CookieNullableField.secure`, and `CookieNullableField.partitioned`
+- migrate `copyWith(clear: {...})` call sites by dropping those removed fields and using omitted flags or explicit `false` instead
 
 ## 0.1.0
 

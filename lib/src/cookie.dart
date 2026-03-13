@@ -289,6 +289,14 @@ class Cookie {
       return value;
     }
 
+    bool parseFlagValue(String value) {
+      final normalized = value.trim().toLowerCase();
+      return switch (normalized) {
+        'false' || '0' || '?0' => false,
+        _ => true,
+      };
+    }
+
     final firstPair = parts.first;
     if (!firstPair.contains('=')) {
       throw ArgumentError.value(
@@ -314,9 +322,9 @@ class Cookie {
       cookie = switch (name.trim().toLowerCase()) {
         'expires' => cookie.copyWith(expires: parseExpiresValue(value)),
         'max-age' => cookie.copyWith(maxAge: parseMaxAgeValue(value)),
-        'secure' => cookie.copyWith(secure: true),
-        'httponly' => cookie.copyWith(httpOnly: true),
-        'partitioned' => cookie.copyWith(partitioned: true),
+        'secure' => cookie.copyWith(secure: parseFlagValue(value)),
+        'httponly' => cookie.copyWith(httpOnly: parseFlagValue(value)),
+        'partitioned' => cookie.copyWith(partitioned: parseFlagValue(value)),
         'path' => cookie.copyWith(path: value),
         'domain' => cookie.copyWith(domain: value),
         'samesite' => cookie.copyWith(
