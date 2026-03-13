@@ -78,6 +78,11 @@ if (errors.isNotEmpty) {
 - `SameSite=None` requires `Secure=true`.
 - `Partitioned=true` requires `Secure=true`.
 
+## Flag Semantics
+
+- `HttpOnly`, `Secure`, and `Partitioned` are two-state flags.
+- Omitting a flag is equivalent to setting it to `false`.
+
 # API Reference
 
 See the [API documentation](https://pub.dev/documentation/ocookie) for detailed information about all available APIs.

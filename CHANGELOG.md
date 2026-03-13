@@ -1,3 +1,8 @@
+## Unreleased
+
+- make `httpOnly`, `secure`, and `partitioned` two-state flags with `false` defaults
+- treat omitted flags and explicit `false` as the same value semantics
+
 ## 0.1.0
 
 - add `Cookie.validate` for explicit pre-serialization checks
