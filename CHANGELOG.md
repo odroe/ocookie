@@ -1,4 +1,4 @@
-## Unreleased
+## 0.2.0
 
 - make `httpOnly`, `secure`, and `partitioned` two-state flags with `false` defaults
 - treat omitted flags and explicit `false` as the same value semantics
