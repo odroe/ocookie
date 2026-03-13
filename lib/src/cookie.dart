@@ -32,13 +32,10 @@ enum CookieSameSite {
 enum CookieNullableField {
   expires,
   domain,
-  httpOnly,
   maxAge,
   path,
   priority,
   sameSite,
-  secure,
-  partitioned,
 }
 
 class Cookie {
@@ -49,26 +46,26 @@ class Cookie {
     this.value, {
     this.expires,
     this.domain,
-    this.httpOnly,
+    this.httpOnly = false,
     this.maxAge,
     this.path,
     this.priority,
     this.sameSite,
-    this.secure,
-    this.partitioned,
+    this.secure = false,
+    this.partitioned = false,
   });
 
   final String name;
   final String value;
   final DateTime? expires;
   final String? domain;
-  final bool? httpOnly;
+  final bool httpOnly;
   final Duration? maxAge;
   final String? path;
   final CookiePriority? priority;
   final CookieSameSite? sameSite;
-  final bool? secure;
-  final bool? partitioned;
+  final bool secure;
+  final bool partitioned;
 
   Cookie copyWith({
     String? name,
@@ -100,17 +97,10 @@ class Cookie {
 
     assertNoConflict(CookieNullableField.expires, expires, 'expires');
     assertNoConflict(CookieNullableField.domain, domain, 'domain');
-    assertNoConflict(CookieNullableField.httpOnly, httpOnly, 'httpOnly');
     assertNoConflict(CookieNullableField.maxAge, maxAge, 'maxAge');
     assertNoConflict(CookieNullableField.path, path, 'path');
     assertNoConflict(CookieNullableField.priority, priority, 'priority');
     assertNoConflict(CookieNullableField.sameSite, sameSite, 'sameSite');
-    assertNoConflict(CookieNullableField.secure, secure, 'secure');
-    assertNoConflict(
-      CookieNullableField.partitioned,
-      partitioned,
-      'partitioned',
-    );
 
     return Cookie(
       name ?? this.name,
@@ -121,9 +111,7 @@ class Cookie {
       domain: clear.contains(CookieNullableField.domain)
           ? null
           : domain ?? this.domain,
-      httpOnly: clear.contains(CookieNullableField.httpOnly)
-          ? null
-          : httpOnly ?? this.httpOnly,
+      httpOnly: httpOnly ?? this.httpOnly,
       maxAge: clear.contains(CookieNullableField.maxAge)
           ? null
           : maxAge ?? this.maxAge,
@@ -134,12 +122,8 @@ class Cookie {
       sameSite: clear.contains(CookieNullableField.sameSite)
           ? null
           : sameSite ?? this.sameSite,
-      secure: clear.contains(CookieNullableField.secure)
-          ? null
-          : secure ?? this.secure,
-      partitioned: clear.contains(CookieNullableField.partitioned)
-          ? null
-          : partitioned ?? this.partitioned,
+      secure: secure ?? this.secure,
+      partitioned: partitioned ?? this.partitioned,
     );
   }
 
@@ -171,12 +155,12 @@ class Cookie {
     if (domain?.isNotEmpty == true && !cookieAllowPattern.hasMatch(domain!)) {
       errors.add('domain is invalid');
     }
-    if (sameSite == CookieSameSite.none && secure != true) {
+    if (sameSite == CookieSameSite.none && !secure) {
       errors.add(
         'SameSite attribute is set to none, but the secure flag is not set to true.',
       );
     }
-    if (partitioned == true && secure != true) {
+    if (partitioned && !secure) {
       errors.add(
         'Partitioned attribute is set, but the secure flag is not set to true.',
       );
@@ -202,11 +186,11 @@ class Cookie {
     if (domain?.isNotEmpty == true && !cookieAllowPattern.hasMatch(domain!)) {
       throw ArgumentError.value(domain, 'domain', 'domain is invalid');
     }
-    if (sameSite == CookieSameSite.none && secure != true) {
+    if (sameSite == CookieSameSite.none && !secure) {
       throw StateError(
           'SameSite attribute is set to none, but the secure flag is not set to true.');
     }
-    if (partitioned == true && secure != true) {
+    if (partitioned && !secure) {
       throw StateError(
           'Partitioned attribute is set, but the secure flag is not set to true.');
     }
@@ -217,8 +201,8 @@ class Cookie {
       if (domain?.isNotEmpty == true) 'Domain=$domain',
       if (path?.isNotEmpty == true) 'Path=$path',
       if (expires != null) 'Expires=${formatHttpDate(expires!)}',
-      if (httpOnly == true) 'HttpOnly',
-      if (secure == true) 'Secure',
+      if (httpOnly) 'HttpOnly',
+      if (secure) 'Secure',
       if (priority != null)
         'Priority=${switch (priority!) {
           CookiePriority.low => 'Low',
@@ -231,7 +215,7 @@ class Cookie {
           CookieSameSite.lax => 'Lax',
           CookieSameSite.none => 'None',
         }}',
-      if (partitioned == true) 'Partitioned',
+      if (partitioned) 'Partitioned',
     ];
 
     return parts.join('; ');
@@ -305,6 +289,14 @@ class Cookie {
       return value;
     }
 
+    bool parseFlagValue(String value) {
+      final normalized = value.trim().toLowerCase();
+      return switch (normalized) {
+        'false' || '0' || '?0' => false,
+        _ => true,
+      };
+    }
+
     final firstPair = parts.first;
     if (!firstPair.contains('=')) {
       throw ArgumentError.value(
@@ -330,9 +322,9 @@ class Cookie {
       cookie = switch (name.trim().toLowerCase()) {
         'expires' => cookie.copyWith(expires: parseExpiresValue(value)),
         'max-age' => cookie.copyWith(maxAge: parseMaxAgeValue(value)),
-        'secure' => cookie.copyWith(secure: true),
-        'httponly' => cookie.copyWith(httpOnly: true),
-        'partitioned' => cookie.copyWith(partitioned: true),
+        'secure' => cookie.copyWith(secure: parseFlagValue(value)),
+        'httponly' => cookie.copyWith(httpOnly: parseFlagValue(value)),
+        'partitioned' => cookie.copyWith(partitioned: parseFlagValue(value)),
         'path' => cookie.copyWith(path: value),
         'domain' => cookie.copyWith(domain: value),
         'samesite' => cookie.copyWith(

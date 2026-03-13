@@ -44,6 +44,66 @@ void main() {
       final cookie = Cookie.fromString('a="hello%20world"');
 
       expect(cookie.value, 'hello world');
+      expect(cookie.httpOnly, isFalse);
+      expect(cookie.secure, isFalse);
+      expect(cookie.partitioned, isFalse);
+    });
+
+    test('should preserve quoted values containing equals signs', () {
+      final cookie = Cookie.fromString('session="a=b=c%202"');
+
+      expect(cookie.value, 'a=b=c 2');
+    });
+
+    test('should ignore unknown attributes from real-world headers', () {
+      final cookie = Cookie.fromString(
+        'sid=abc123; Path=/; HttpOnly; Secure; SameSite=None; Foo=bar; Version=1',
+      );
+
+      expect(cookie.name, 'sid');
+      expect(cookie.value, 'abc123');
+      expect(cookie.path, '/');
+      expect(cookie.httpOnly, isTrue);
+      expect(cookie.secure, isTrue);
+      expect(cookie.sameSite, CookieSameSite.none);
+      expect(cookie.priority, isNull);
+    });
+
+    test('should keep the last repeated recognized attribute', () {
+      final cookie = Cookie.fromString(
+        'sid=abc; Path=/one; Path=/two; SameSite=Lax; SameSite=None; Secure',
+      );
+
+      expect(cookie.path, '/two');
+      expect(cookie.sameSite, CookieSameSite.none);
+      expect(cookie.secure, isTrue);
+    });
+
+    test('should treat non-standard flag values predictably', () {
+      final enabledCookie = Cookie.fromString(
+        'sid=abc; Secure=1; HttpOnly=true; Partitioned=?1',
+      );
+      final disabledCookie = Cookie.fromString(
+        'sid=abc; Secure=false; HttpOnly=false; Partitioned=false',
+      );
+
+      expect(enabledCookie.secure, isTrue);
+      expect(enabledCookie.httpOnly, isTrue);
+      expect(enabledCookie.partitioned, isTrue);
+      expect(disabledCookie.secure, isFalse);
+      expect(disabledCookie.httpOnly, isFalse);
+      expect(disabledCookie.partitioned, isFalse);
+    });
+
+    test('should ignore invalid recognized attribute values without failing',
+        () {
+      final cookie = Cookie.fromString(
+        'sid=abc; SameSite=invalid; Priority=urgent; Secure',
+      );
+
+      expect(cookie.sameSite, isNull);
+      expect(cookie.priority, isNull);
+      expect(cookie.secure, isTrue);
     });
 
     test('should throw for invalid first pair without equals', () {
@@ -88,6 +148,19 @@ void main() {
       expect(values, [
         'a=b',
         'c=d',
+      ]);
+    });
+
+    test('should split combined headers with quoted commas and expires dates',
+        () {
+      final values = Cookie.splitSetCookie(
+        'a="b,c"; Path=/, sid=1; Expires=Wed, 21 Oct 2015 07:28:00 GMT; HttpOnly, theme=light',
+      );
+
+      expect(values, [
+        'a="b,c"; Path=/',
+        'sid=1; Expires=Wed, 21 Oct 2015 07:28:00 GMT; HttpOnly',
+        'theme=light',
       ]);
     });
   });

@@ -55,25 +55,22 @@ void main() {
         clear: {
           CookieNullableField.expires,
           CookieNullableField.domain,
-          CookieNullableField.httpOnly,
           CookieNullableField.maxAge,
           CookieNullableField.path,
           CookieNullableField.priority,
           CookieNullableField.sameSite,
-          CookieNullableField.secure,
-          CookieNullableField.partitioned,
         },
       );
 
       expect(result.expires, isNull);
       expect(result.domain, isNull);
-      expect(result.httpOnly, isNull);
+      expect(result.httpOnly, isTrue);
       expect(result.maxAge, isNull);
       expect(result.path, isNull);
       expect(result.priority, isNull);
       expect(result.sameSite, isNull);
-      expect(result.secure, isNull);
-      expect(result.partitioned, isNull);
+      expect(result.secure, isTrue);
+      expect(result.partitioned, isTrue);
     });
 
     test('should throw when a field is set and cleared together', () {
@@ -102,6 +99,20 @@ void main() {
         path: '/',
         secure: true,
         sameSite: CookieSameSite.none,
+      );
+
+      expect(a, equals(b));
+      expect(a.hashCode, b.hashCode);
+    });
+
+    test('should treat omitted flags and false flags as equal', () {
+      final a = Cookie('sid', 'abc');
+      final b = Cookie(
+        'sid',
+        'abc',
+        httpOnly: false,
+        secure: false,
+        partitioned: false,
       );
 
       expect(a, equals(b));
