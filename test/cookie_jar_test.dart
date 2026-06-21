@@ -70,6 +70,49 @@ void main() {
       );
     });
 
+    test('preserves host-only and domain cookies with same name and path',
+        () async {
+      final jar = CookieJar();
+      final now = DateTime.utc(2026, 1, 1, 0, 0);
+      final later = now.add(const Duration(seconds: 1));
+      final latest = now.add(const Duration(seconds: 2));
+
+      await jar.save(
+        Uri.parse('https://example.com/login'),
+        ['sid=host; Path=/'],
+        now: now,
+      );
+      await jar.save(
+        Uri.parse('https://api.example.com/login'),
+        ['sid=domain; Domain=example.com; Path=/'],
+        now: later,
+      );
+
+      expect(
+        await jar.header(Uri.parse('https://example.com/home'), now: latest),
+        'sid=host; sid=domain',
+      );
+      expect(
+        await jar.header(Uri.parse('https://sub.example.com/home'),
+            now: latest),
+        'sid=domain',
+      );
+
+      await jar.save(
+        Uri.parse('https://api.example.com/login'),
+        ['sid=gone; Domain=example.com; Max-Age=0; Path=/'],
+        now: latest,
+      );
+
+      expect(
+        await jar.header(
+          Uri.parse('https://example.com/home'),
+          now: latest.add(const Duration(seconds: 1)),
+        ),
+        'sid=host',
+      );
+    });
+
     test('enforces host-only, domain, and secure matching', () async {
       final jar = CookieJar();
       final now = DateTime.utc(2026, 1, 1, 0, 0);
@@ -199,6 +242,30 @@ void main() {
         await jar.header(
           secureUri,
           now: now.add(const Duration(seconds: 4)),
+        ),
+        'sid=secret',
+      );
+    });
+
+    test('rejects insecure path overlays of existing secure cookies', () async {
+      final jar = CookieJar();
+      final now = DateTime.utc(2026, 1, 1, 0, 0);
+
+      await jar.save(
+        Uri.parse('https://example.com/login'),
+        ['sid=secret; Secure; Path=/login'],
+        now: now,
+      );
+      await jar.save(
+        Uri.parse('http://example.com/login/en'),
+        ['sid=attacker; Path=/login/en'],
+        now: now.add(const Duration(seconds: 1)),
+      );
+
+      expect(
+        await jar.header(
+          Uri.parse('https://example.com/login/en'),
+          now: now.add(const Duration(seconds: 2)),
         ),
         'sid=secret',
       );

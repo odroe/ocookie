@@ -81,7 +81,7 @@ abstract interface class CookieStore {
   /// Loads cookies that may match or be replaced by cookies from [uri].
   Future<Iterable<StoredCookie>> loadCandidates(Uri uri);
 
-  /// Inserts or replaces [cookie] by name, domain, and path.
+  /// Inserts or replaces [cookie] by name, domain, path, and host-only state.
   Future<void> upsert(StoredCookie cookie);
 
   /// Deletes the cookie identified by [key].
@@ -246,9 +246,7 @@ final class CookieJar {
   ) async {
     final key = CookieKey.fromStoredCookie(cookie);
     final previous = existing[key];
-    if (previous?.cookie.secure == true &&
-        !cookie.cookie.secure &&
-        uri.scheme != 'https') {
+    if (_wouldOverlaySecureCookie(cookie, existing.values, uri)) {
       return;
     }
 
@@ -263,5 +261,55 @@ final class CookieJar {
         : cookie.copyWith(creationTime: previous.creationTime);
     await store.upsert(normalized);
     existing[key] = normalized;
+  }
+
+  bool _wouldOverlaySecureCookie(
+    StoredCookie cookie,
+    Iterable<StoredCookie> existing,
+    Uri uri,
+  ) {
+    if (cookie.cookie.secure || uri.scheme == 'https') {
+      return false;
+    }
+
+    return existing.any((stored) {
+      return stored.cookie.secure &&
+          stored.cookie.name == cookie.cookie.name &&
+          _domainsOverlap(stored, cookie) &&
+          _pathMatches(cookie.path, stored.path);
+    });
+  }
+
+  bool _domainsOverlap(StoredCookie a, StoredCookie b) {
+    if (a.hostOnly && b.hostOnly) {
+      return a.domain == b.domain;
+    }
+    if (a.hostOnly) {
+      return _domainMatches(a.domain, b.domain);
+    }
+    if (b.hostOnly) {
+      return _domainMatches(b.domain, a.domain);
+    }
+
+    return _domainMatches(a.domain, b.domain) ||
+        _domainMatches(b.domain, a.domain);
+  }
+
+  bool _domainMatches(String host, String domain) {
+    return host == domain || host.endsWith('.$domain');
+  }
+
+  bool _pathMatches(String requestPath, String cookiePath) {
+    if (requestPath == cookiePath) {
+      return true;
+    }
+    if (!requestPath.startsWith(cookiePath)) {
+      return false;
+    }
+    if (cookiePath.endsWith('/')) {
+      return true;
+    }
+
+    return requestPath[cookiePath.length] == '/';
   }
 }

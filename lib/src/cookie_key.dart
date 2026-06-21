@@ -6,6 +6,7 @@ final class CookieKey {
     required this.name,
     required this.domain,
     required this.path,
+    required this.hostOnly,
   });
 
   /// Cookie name.
@@ -17,12 +18,16 @@ final class CookieKey {
   /// Effective path used for matching.
   final String path;
 
+  /// Whether the cookie is scoped to one host.
+  final bool hostOnly;
+
   /// Creates a key for [cookie].
   factory CookieKey.fromStoredCookie(StoredCookie cookie) {
     return CookieKey(
       name: cookie.cookie.name,
       domain: cookie.domain,
       path: cookie.path,
+      hostOnly: cookie.hostOnly,
     );
   }
 
@@ -32,11 +37,12 @@ final class CookieKey {
       other is CookieKey &&
           name == other.name &&
           domain == other.domain &&
-          path == other.path;
+          path == other.path &&
+          hostOnly == other.hostOnly;
 
   @override
-  int get hashCode => Object.hash(name, domain, path);
+  int get hashCode => Object.hash(name, domain, path, hostOnly);
 
   @override
-  String toString() => '$name;$domain;$path';
+  String toString() => '$name;$domain;$path;$hostOnly';
 }
