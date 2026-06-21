@@ -1,4 +1,4 @@
-## Unreleased
+## 0.3.0
 
 - Add pluggable cookie jar primitives with `CookiePolicy`, `CookieStore`, `MemoryCookieStore`, `CookieJar`, and `CookieKey`.
 - Add stored-cookie creation and last-access metadata for jar sorting and storage use cases.
