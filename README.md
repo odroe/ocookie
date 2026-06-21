@@ -27,6 +27,13 @@ final setCookie = Cookie.fromString(
 );
 print(setCookie.path); // /
 
+final stored = StoredCookie.fromSetCookie(
+  'sid=abc; Path=/; HttpOnly',
+  requestUri: Uri.parse('https://example.com/login'),
+);
+print(stored.matches(Uri.parse('https://example.com/profile'))); // true
+print(stored.toRequestCookie()); // sid=abc
+
 final values = Cookie.splitSetCookie(
   'a=b; Expires=Wed, 21 Oct 2015 07:28:00 GMT, c=d; Path=/',
 );
@@ -40,6 +47,7 @@ print(values); // [a=b; Expires=Wed, 21 Oct 2015 07:28:00 GMT, c=d; Path=/]
 - `Cookie.parse` - Parse client-side `cookie` header map.
 - `Cookie.fromString` - Parse a set-cookie string to Cookie instance.
 - `Cookie.splitSetCookie` - Split a string of multiple set-cookie values into a set-cookie string list.
+- `StoredCookie.fromSetCookie` - Normalize a Set-Cookie value for request matching.
 
 ## CopyWith And Clear
 
