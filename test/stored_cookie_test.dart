@@ -16,6 +16,7 @@ void main() {
       expect(stored.path, '/');
       expect(stored.hostOnly, isTrue);
       expect(stored.expiresAt, isNull);
+      expect(stored.creationTime, stored.lastAccessTime);
       expect(stored.matches(Uri.parse('https://example.com/profile')), isTrue);
       expect(
         stored.matches(Uri.parse('https://sub.example.com/profile')),
@@ -204,6 +205,33 @@ void main() {
       );
 
       expect(stored.toRequestCookie(), 'sid=a%20b');
+    });
+
+    test('copies stored metadata', () {
+      final now = DateTime.utc(2026, 1, 1, 0, 0);
+      final stored = StoredCookie.fromSetCookie(
+        'sid=abc; Max-Age=60',
+        requestUri: Uri.parse('https://example.com/login'),
+        now: now,
+      );
+      final accessed = now.add(const Duration(seconds: 10));
+
+      final copy = stored.copyWith(
+        expiresAt: now.add(const Duration(minutes: 2)),
+        lastAccessTime: accessed,
+      );
+      expect(copy.creationTime, now);
+      expect(copy.lastAccessTime, accessed);
+      expect(copy.expiresAt, now.add(const Duration(minutes: 2)));
+
+      expect(copy.copyWith(clearExpiresAt: true).expiresAt, isNull);
+      expect(
+        () => copy.copyWith(
+          expiresAt: now,
+          clearExpiresAt: true,
+        ),
+        throwsArgumentError,
+      );
     });
   });
 }

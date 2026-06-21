@@ -7,12 +7,14 @@ import 'types.dart';
 /// user-agent state needed to decide whether that cookie should be sent with a
 /// later request.
 final class StoredCookie {
-  const StoredCookie._({
+  const StoredCookie({
     required this.cookie,
     required this.domain,
     required this.path,
     required this.hostOnly,
     required this.expiresAt,
+    required this.creationTime,
+    required this.lastAccessTime,
   });
 
   /// The parsed cookie with normalized Domain and Path attributes.
@@ -31,6 +33,12 @@ final class StoredCookie {
   ///
   /// A null value represents a session cookie.
   final DateTime? expiresAt;
+
+  /// When this cookie was first created in the store.
+  final DateTime creationTime;
+
+  /// When this cookie was last selected for a request.
+  final DateTime lastAccessTime;
 
   /// Parses and normalizes a Set-Cookie value received for [requestUri].
   factory StoredCookie.fromSetCookie(
@@ -52,6 +60,7 @@ final class StoredCookie {
     required Uri requestUri,
     DateTime? now,
   }) {
+    final receivedAt = (now ?? DateTime.now()).toUtc();
     final requestHost = _requestHost(requestUri);
     final rawDomain = cookie.domain?.trim();
     final hasDomainAttribute = rawDomain != null && rawDomain.isNotEmpty;
@@ -75,7 +84,7 @@ final class StoredCookie {
     }
 
     final path = _effectivePath(cookie.path, requestUri.path);
-    final expiresAt = _expiresAt(cookie, now ?? DateTime.now().toUtc());
+    final expiresAt = _expiresAt(cookie, receivedAt);
     final normalizedCookie = hostOnly
         ? cookie.copyWith(
             path: path,
@@ -83,12 +92,44 @@ final class StoredCookie {
           )
         : cookie.copyWith(domain: domain, path: path);
 
-    return StoredCookie._(
+    return StoredCookie(
       cookie: normalizedCookie,
       domain: domain,
       path: path,
       hostOnly: hostOnly,
       expiresAt: expiresAt,
+      creationTime: receivedAt,
+      lastAccessTime: receivedAt,
+    );
+  }
+
+  /// Creates a copy with selected fields replaced.
+  StoredCookie copyWith({
+    Cookie? cookie,
+    String? domain,
+    String? path,
+    bool? hostOnly,
+    DateTime? expiresAt,
+    bool clearExpiresAt = false,
+    DateTime? creationTime,
+    DateTime? lastAccessTime,
+  }) {
+    if (clearExpiresAt && expiresAt != null) {
+      throw ArgumentError.value(
+        expiresAt,
+        'expiresAt',
+        'cannot set and clear expiresAt',
+      );
+    }
+
+    return StoredCookie(
+      cookie: cookie ?? this.cookie,
+      domain: domain ?? this.domain,
+      path: path ?? this.path,
+      hostOnly: hostOnly ?? this.hostOnly,
+      expiresAt: clearExpiresAt ? null : expiresAt ?? this.expiresAt,
+      creationTime: creationTime ?? this.creationTime,
+      lastAccessTime: lastAccessTime ?? this.lastAccessTime,
     );
   }
 

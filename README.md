@@ -34,6 +34,13 @@ final stored = StoredCookie.fromSetCookie(
 print(stored.matches(Uri.parse('https://example.com/profile'))); // true
 print(stored.toRequestCookie()); // sid=abc
 
+final jar = CookieJar();
+await jar.save(
+  Uri.parse('https://example.com/login'),
+  ['sid=abc; Path=/; HttpOnly'],
+);
+print(await jar.header(Uri.parse('https://example.com/profile'))); // sid=abc
+
 final values = Cookie.splitSetCookie(
   'a=b; Expires=Wed, 21 Oct 2015 07:28:00 GMT, c=d; Path=/',
 );
@@ -48,6 +55,8 @@ print(values); // [a=b; Expires=Wed, 21 Oct 2015 07:28:00 GMT, c=d; Path=/]
 - `Cookie.fromString` - Parse a set-cookie string to Cookie instance.
 - `Cookie.splitSetCookie` - Split a string of multiple set-cookie values into a set-cookie string list.
 - `StoredCookie.fromSetCookie` - Normalize a Set-Cookie value for request matching.
+- `CookieJar` - Save Set-Cookie values and build matching Cookie request headers.
+- `CookieStore` - Plug in custom persistence behind the jar policy layer.
 
 ## CopyWith And Clear
 
