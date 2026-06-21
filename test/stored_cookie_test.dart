@@ -25,8 +25,8 @@ void main() {
 
     test('normalizes domain attributes and matches subdomains', () {
       final stored = StoredCookie.fromSetCookie(
-        'sid=abc; Domain=.Example.COM; Path=/; Secure',
-        requestUri: Uri.parse('https://api.example.com/login'),
+        'sid=abc; Domain=.Example.COM.; Path=/; Secure',
+        requestUri: Uri.parse('https://api.example.com./login'),
       );
 
       expect(stored.cookie.domain, 'example.com');
@@ -44,6 +44,16 @@ void main() {
       expect(
         stored.matches(Uri.parse('http://example.com/profile')),
         isFalse,
+      );
+    });
+
+    test('rejects secure cookies from insecure request URIs', () {
+      expect(
+        () => StoredCookie.fromSetCookie(
+          'sid=abc; Secure',
+          requestUri: Uri.parse('http://example.com/login'),
+        ),
+        throwsArgumentError,
       );
     });
 

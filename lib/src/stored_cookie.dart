@@ -58,6 +58,13 @@ final class StoredCookie {
 
     final hostOnly = !hasDomainAttribute;
     final domain = hostOnly ? requestHost : _normalizeDomain(rawDomain);
+    if (cookie.secure && requestUri.scheme != 'https') {
+      throw ArgumentError.value(
+        requestUri,
+        'requestUri',
+        'Secure cookies can only be stored from secure request URIs.',
+      );
+    }
     if (!hostOnly && !_isValidCookieDomain(requestHost, domain)) {
       throw ArgumentError.value(
         cookie.domain,
@@ -130,12 +137,16 @@ String _requestHost(Uri uri) {
     throw ArgumentError.value(uri, 'uri', 'URI must include a host.');
   }
 
-  return uri.host.toLowerCase();
+  return _stripTrailingDot(uri.host.toLowerCase());
 }
 
 String _normalizeDomain(String value) {
-  final normalized = value.trim().toLowerCase();
+  final normalized = _stripTrailingDot(value.trim().toLowerCase());
   return normalized.startsWith('.') ? normalized.substring(1) : normalized;
+}
+
+String _stripTrailingDot(String value) {
+  return value.endsWith('.') ? value.substring(0, value.length - 1) : value;
 }
 
 bool _isValidCookieDomain(String requestHost, String domain) {
