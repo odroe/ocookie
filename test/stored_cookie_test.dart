@@ -25,7 +25,7 @@ void main() {
 
     test('normalizes domain attributes and matches subdomains', () {
       final stored = StoredCookie.fromSetCookie(
-        'sid=abc; Domain=.Example.COM.; Path=/; Secure',
+        'sid=abc; Domain=.Example.COM; Path=/; Secure',
         requestUri: Uri.parse('https://api.example.com./login'),
       );
 
@@ -47,6 +47,16 @@ void main() {
       );
     });
 
+    test('rejects domain attributes with trailing dots', () {
+      expect(
+        () => StoredCookie.fromSetCookie(
+          'sid=abc; Domain=example.com.',
+          requestUri: Uri.parse('https://example.com/login'),
+        ),
+        throwsArgumentError,
+      );
+    });
+
     test('rejects secure cookies from insecure request URIs', () {
       expect(
         () => StoredCookie.fromSetCookie(
@@ -55,6 +65,53 @@ void main() {
         ),
         throwsArgumentError,
       );
+    });
+
+    test('enforces __Secure- cookie-name prefix constraints', () {
+      expect(
+        () => StoredCookie.fromSetCookie(
+          '__Secure-sid=abc',
+          requestUri: Uri.parse('https://example.com/login'),
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => StoredCookie.fromSetCookie(
+          '__Secure-sid=abc; Secure',
+          requestUri: Uri.parse('http://example.com/login'),
+        ),
+        throwsArgumentError,
+      );
+
+      final stored = StoredCookie.fromSetCookie(
+        '__Secure-sid=abc; Secure',
+        requestUri: Uri.parse('https://example.com/login'),
+      );
+      expect(stored.cookie.name, '__Secure-sid');
+    });
+
+    test('enforces __Host- cookie-name prefix constraints', () {
+      final valid = StoredCookie.fromSetCookie(
+        '__Host-sid=abc; Secure; Path=/',
+        requestUri: Uri.parse('https://example.com/login'),
+      );
+      expect(valid.hostOnly, isTrue);
+      expect(valid.path, '/');
+
+      for (final value in [
+        '__Host-sid=abc; Path=/',
+        '__Host-sid=abc; Secure',
+        '__Host-sid=abc; Secure; Path=/app',
+        '__Host-sid=abc; Secure; Path=/; Domain=example.com',
+      ]) {
+        expect(
+          () => StoredCookie.fromSetCookie(
+            value,
+            requestUri: Uri.parse('https://example.com/login'),
+          ),
+          throwsArgumentError,
+        );
+      }
     });
 
     test('rejects domain attributes outside the request host', () {

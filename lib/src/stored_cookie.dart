@@ -65,6 +65,7 @@ final class StoredCookie {
         'Secure cookies can only be stored from secure request URIs.',
       );
     }
+    _validateCookieNamePrefix(cookie, requestUri, hostOnly);
     if (!hostOnly && !_isValidCookieDomain(requestHost, domain)) {
       throw ArgumentError.value(
         cookie.domain,
@@ -141,12 +142,35 @@ String _requestHost(Uri uri) {
 }
 
 String _normalizeDomain(String value) {
-  final normalized = _stripTrailingDot(value.trim().toLowerCase());
+  final normalized = value.trim().toLowerCase();
   return normalized.startsWith('.') ? normalized.substring(1) : normalized;
 }
 
 String _stripTrailingDot(String value) {
   return value.endsWith('.') ? value.substring(0, value.length - 1) : value;
+}
+
+void _validateCookieNamePrefix(Cookie cookie, Uri requestUri, bool hostOnly) {
+  if (cookie.name.startsWith('__Secure-') &&
+      (!cookie.secure || requestUri.scheme != 'https')) {
+    throw ArgumentError.value(
+      cookie.name,
+      'cookie.name',
+      '__Secure- cookies require Secure and a secure request URI.',
+    );
+  }
+
+  if (cookie.name.startsWith('__Host-') &&
+      (!cookie.secure ||
+          requestUri.scheme != 'https' ||
+          !hostOnly ||
+          cookie.path != '/')) {
+    throw ArgumentError.value(
+      cookie.name,
+      'cookie.name',
+      '__Host- cookies require Secure, Path=/, no Domain, and a secure request URI.',
+    );
+  }
 }
 
 bool _isValidCookieDomain(String requestHost, String domain) {
