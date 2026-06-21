@@ -30,7 +30,6 @@ final class CookieKey {
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is CookieKey &&
-          runtimeType == other.runtimeType &&
           name == other.name &&
           domain == other.domain &&
           path == other.path;

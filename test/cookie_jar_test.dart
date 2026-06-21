@@ -157,6 +157,53 @@ void main() {
       expect(await jar.header(uri, now: now), 'sid=a%20b');
     });
 
+    test('rejects insecure overwrites of existing secure cookies', () async {
+      final jar = CookieJar();
+      final secureUri = Uri.parse('https://example.com/login');
+      final insecureUri = Uri.parse('http://example.com/login');
+      final now = DateTime.utc(2026, 1, 1, 0, 0);
+
+      await jar.save(
+        secureUri,
+        ['sid=secret; Secure; Path=/'],
+        now: now,
+      );
+      await jar.save(
+        insecureUri,
+        ['sid=attacker; Path=/'],
+        now: now.add(const Duration(seconds: 1)),
+      );
+
+      expect(
+        await jar.header(
+          secureUri,
+          now: now.add(const Duration(seconds: 2)),
+        ),
+        'sid=secret',
+      );
+      expect(
+        await jar.header(
+          insecureUri,
+          now: now.add(const Duration(seconds: 2)),
+        ),
+        isNull,
+      );
+
+      await jar.save(
+        insecureUri,
+        ['sid=gone; Max-Age=0; Path=/'],
+        now: now.add(const Duration(seconds: 3)),
+      );
+
+      expect(
+        await jar.header(
+          secureUri,
+          now: now.add(const Duration(seconds: 4)),
+        ),
+        'sid=secret',
+      );
+    });
+
     test('supports parsed cookies as input', () async {
       final jar = CookieJar();
       final uri = Uri.parse('https://example.com/login');

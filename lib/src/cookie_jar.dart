@@ -62,11 +62,15 @@ final class CookiePolicy {
   }
 
   /// Serializes stored cookies as a single Cookie request header value.
+  ///
+  /// Set [sort] to false when [cookies] are already in header order.
   String toRequestHeaderValue(
     Iterable<StoredCookie> cookies, {
     CookieCodec? encode,
+    bool sort = true,
   }) {
-    return sortForHeader(cookies)
+    final headerCookies = sort ? sortForHeader(cookies) : cookies;
+    return headerCookies
         .map((cookie) => toRequestCookie(cookie, encode: encode))
         .join('; ');
   }
@@ -74,7 +78,7 @@ final class CookiePolicy {
 
 /// Pluggable persistence boundary for stored cookies.
 abstract interface class CookieStore {
-  /// Loads cookies that may match [uri].
+  /// Loads cookies that may match or be replaced by cookies from [uri].
   Future<Iterable<StoredCookie>> loadCandidates(Uri uri);
 
   /// Inserts or replaces [cookie] by name, domain, and path.
@@ -143,7 +147,7 @@ final class CookieJar {
         decode: decode,
       );
 
-      await _storeNormalized(cookie, existing, nowUtc);
+      await _storeNormalized(cookie, existing, nowUtc, uri);
     }
   }
 
@@ -163,7 +167,7 @@ final class CookieJar {
         now: nowUtc,
       );
 
-      await _storeNormalized(stored, existing, nowUtc);
+      await _storeNormalized(stored, existing, nowUtc, uri);
     }
   }
 
@@ -209,7 +213,7 @@ final class CookieJar {
       return null;
     }
 
-    return policy.toRequestHeaderValue(cookies, encode: encode);
+    return policy.toRequestHeaderValue(cookies, encode: encode, sort: false);
   }
 
   /// Removes every cookie from the underlying store.
@@ -238,15 +242,22 @@ final class CookieJar {
     StoredCookie cookie,
     Map<CookieKey, StoredCookie> existing,
     DateTime now,
+    Uri uri,
   ) async {
     final key = CookieKey.fromStoredCookie(cookie);
+    final previous = existing[key];
+    if (previous?.cookie.secure == true &&
+        !cookie.cookie.secure &&
+        uri.scheme != 'https') {
+      return;
+    }
+
     if (cookie.isExpired(now)) {
       await store.delete(key);
       existing.remove(key);
       return;
     }
 
-    final previous = existing[key];
     final normalized = previous == null
         ? cookie
         : cookie.copyWith(creationTime: previous.creationTime);
