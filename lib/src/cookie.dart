@@ -1,46 +1,106 @@
+/// @docImport 'cookie_jar.dart';
+/// @docImport 'stored_cookie.dart';
+library;
+
 import 'package:http_parser/http_parser.dart'
     show formatHttpDate, parseHttpDate;
 
 import '_utils.dart';
 import 'types.dart';
 
-/// Enum representing the priority levels for a cookie.
+/// Priority hints that can be attached to a `Set-Cookie` value.
+///
+/// Cookie priority is a non-standard but widely implemented attribute used by
+/// some user agents when deciding which cookies to evict first under storage
+/// pressure.
 enum CookiePriority {
-  /// Low priority.
+  /// A low-priority cookie.
   low,
 
-  /// Medium priority.
+  /// A medium-priority cookie.
   medium,
 
-  /// High priority.
+  /// A high-priority cookie.
   high
 }
 
-/// Enum representing the SameSite attribute for a cookie.
+/// Cross-site availability for a cookie.
+///
+/// The value maps to the `SameSite` attribute on a `Set-Cookie` header. A
+/// [none] value can only be serialized when [Cookie.secure] is true.
 enum CookieSameSite {
-  /// Lax same site enforcement.
+  /// Sends the cookie on same-site requests and top-level cross-site
+  /// navigations.
   lax,
 
-  /// Strict same site enforcement.
+  /// Sends the cookie only on same-site requests.
   strict,
 
-  /// No same site enforcement.
+  /// Sends the cookie on same-site and cross-site requests.
+  ///
+  /// Cookies using this value must also set [Cookie.secure].
   none
 }
 
-/// Nullable fields supported by [Cookie.copyWith.clear].
+/// Nullable `Set-Cookie` attributes supported by [Cookie.copyWith].
+///
+/// These values are used with the `clear` argument to remove an attribute from
+/// a copied [Cookie]. Boolean flags such as [Cookie.httpOnly] are not nullable;
+/// set them to false instead of clearing them.
 enum CookieNullableField {
+  /// Clears [Cookie.expires].
   expires,
+
+  /// Clears [Cookie.domain].
   domain,
+
+  /// Clears [Cookie.maxAge].
   maxAge,
+
+  /// Clears [Cookie.path].
   path,
+
+  /// Clears [Cookie.priority].
   priority,
+
+  /// Clears [Cookie.sameSite].
   sameSite,
 }
 
+/// Representation of one HTTP cookie.
+///
+/// A `Cookie` request header only carries name-value pairs. A `Set-Cookie`
+/// response header can also carry attributes such as `Path`, `Domain`,
+/// `HttpOnly`, `Secure`, and `SameSite`. This class stores both forms: use
+/// [parse] for a request header, [fromString] for a single `Set-Cookie` value,
+/// and [serialize] when constructing a response header value.
+///
+/// The constructor does not validate [name], [value], or attributes. Validation
+/// happens in [validate] and [serialize], after the value has been passed
+/// through the selected [CookieCodec].
+///
+/// ```dart
+/// final headerValue = Cookie(
+///   'sid',
+///   'abc',
+///   path: '/',
+///   httpOnly: true,
+///   secure: true,
+/// ).serialize();
+/// ```
+///
+/// This class does not decide whether a cookie should be sent to a later
+/// request. Use [StoredCookie] or [CookieJar] for domain, path, secure, expiry,
+/// and prefix matching.
 class Cookie {
   static const Set<CookieNullableField> _noClearedFields = {};
 
+  /// Creates a cookie with [name], [value], and optional `Set-Cookie`
+  /// attributes.
+  ///
+  /// The [httpOnly], [secure], and [partitioned] flags default to false. This
+  /// means that omitted flags and explicitly false flags have the same
+  /// serialized behavior.
   const Cookie(
     this.name,
     this.value, {
@@ -55,18 +115,83 @@ class Cookie {
     this.partitioned = false,
   });
 
+  /// The cookie name.
+  ///
+  /// When serialized, this must be a valid RFC 6265 token. Empty names and
+  /// names containing separators such as `;`, `,`, or `=` are rejected by
+  /// [serialize].
   final String name;
+
+  /// The cookie value before serialization encoding.
+  ///
+  /// By default, [serialize] applies [Uri.encodeComponent] to this value and
+  /// [parse] or [fromString] applies [Uri.decodeComponent] when a percent escape
+  /// is present. Pass a custom [CookieCodec] to those methods to use a different
+  /// wire encoding.
   final String value;
+
+  /// The absolute expiration time for the `Expires` attribute.
+  ///
+  /// This value is serialized as an HTTP date. When a cookie also has [maxAge],
+  /// [StoredCookie] gives `Max-Age` precedence while computing [StoredCookie.expiresAt].
   final DateTime? expires;
+
+  /// The raw `Domain` attribute value.
+  ///
+  /// This value is not normalized by [Cookie]. [StoredCookie.fromCookie]
+  /// lowercases it, removes a leading dot, and validates it against the request
+  /// host.
   final String? domain;
+
+  /// Whether the `HttpOnly` flag is present.
+  ///
+  /// A cookie with this flag is intended for HTTP request handling and not for
+  /// client-side scripts. The flag only affects serialization; enforcement is a
+  /// user-agent concern.
   final bool httpOnly;
+
+  /// The relative expiration duration for the `Max-Age` attribute.
+  ///
+  /// The value is serialized in whole seconds using [Duration.inSeconds].
+  /// [StoredCookie] treats zero or negative durations as already expired.
   final Duration? maxAge;
+
+  /// The raw `Path` attribute value.
+  ///
+  /// [serialize] rejects non-empty path values that contain control characters
+  /// or `;`. [StoredCookie.fromCookie] computes a default path when the value is
+  /// omitted, empty, or does not start with `/`.
   final String? path;
+
+  /// The `Priority` attribute value.
   final CookiePriority? priority;
+
+  /// The `SameSite` attribute value.
+  ///
+  /// [CookieSameSite.none] requires [secure] to be true when the cookie is
+  /// serialized.
   final CookieSameSite? sameSite;
+
+  /// Whether the `Secure` flag is present.
+  ///
+  /// [StoredCookie] only sends secure cookies to `https` URIs and rejects secure
+  /// cookies received from non-HTTPS request URIs.
   final bool secure;
+
+  /// Whether the `Partitioned` flag is present.
+  ///
+  /// Partitioned cookies must also be [secure] when serialized.
   final bool partitioned;
 
+  /// Creates a copy with selected fields replaced.
+  ///
+  /// Omitted parameters keep their current value. Nullable `Set-Cookie`
+  /// attributes can be removed by including the matching [CookieNullableField]
+  /// in [clear].
+  ///
+  /// It is an error to set and clear the same nullable field in a single call.
+  /// For example, passing both `path: '/'` and
+  /// `clear: {CookieNullableField.path}` throws an [ArgumentError].
   Cookie copyWith({
     String? name,
     String? value,
@@ -127,9 +252,16 @@ class Cookie {
     );
   }
 
-  /// Validates this cookie and returns all error messages.
+  /// Validates this cookie and returns every serialization problem found.
   ///
-  /// Returns an empty list when the cookie can be serialized safely.
+  /// The returned list is empty when [serialize] should be able to produce a
+  /// header value using the same [encode] function. If [encode] throws, the
+  /// error is captured as a validation message and no further value validation
+  /// is attempted.
+  ///
+  /// This method is useful for form-like flows where callers want to report all
+  /// problems at once instead of handling the first exception thrown by
+  /// [serialize].
   List<String> validate({CookieCodec? encode}) {
     final errors = <String>[];
     encode ??= defaultEncode;
@@ -169,6 +301,19 @@ class Cookie {
     return errors;
   }
 
+  /// Serializes this cookie as a `Set-Cookie` header value.
+  ///
+  /// The [value] is encoded before it is written. The default encoder is
+  /// [Uri.encodeComponent].
+  ///
+  /// Throws an [ArgumentError] when [name], [path], or [domain] contains
+  /// characters that cannot be serialized. Throws a [StateError] when the
+  /// encoded value is invalid, when [sameSite] is [CookieSameSite.none] without
+  /// [secure], or when [partitioned] is true without [secure].
+  ///
+  /// See also:
+  ///
+  ///  * [validate], which reports serialization problems without throwing.
   String serialize({CookieCodec? encode}) {
     encode ??= defaultEncode;
 
@@ -256,6 +401,19 @@ class Cookie {
   @override
   String toString() => serialize();
 
+  /// Parses a single `Set-Cookie` header value.
+  ///
+  /// The header must start with a `name=value` pair. Recognized attributes are
+  /// applied to the returned [Cookie], and unknown attributes are ignored.
+  /// Invalid `Expires`, `Max-Age`, `SameSite`, and `Priority` values are ignored
+  /// rather than causing the entire parse to fail.
+  ///
+  /// Explicit false-like flag values (`false`, `0`, and `?0`) disable
+  /// `Secure`, `HttpOnly`, and `Partitioned`; any other flag value enables the
+  /// flag. Quoted cookie values are unwrapped before [decode] is applied.
+  ///
+  /// Throws an [ArgumentError] if [setCookie] is empty, does not start with a
+  /// `name=value` pair, or has an empty cookie name.
   factory Cookie.fromString(String setCookie, {CookieCodec? decode}) {
     decode = (decode ?? defaultDecode).tryRun;
     final parts = setCookie
@@ -350,6 +508,15 @@ class Cookie {
     return cookie;
   }
 
+  /// Parses a `Cookie` request header into name-value pairs.
+  ///
+  /// Malformed segments and empty names are ignored. If a name appears more
+  /// than once, the first parsed value is kept, matching the usual server-side
+  /// behavior for duplicate cookie names.
+  ///
+  /// The optional [filter] is evaluated after the name has been trimmed and
+  /// before the value is decoded. If [decode] throws for a value, the original
+  /// value is kept.
   static Map<String, String> parse(
     String cookies, {
     CookieCodec? decode,
@@ -394,6 +561,13 @@ class Cookie {
     return result;
   }
 
+  /// Splits a combined `Set-Cookie` header value into individual values.
+  ///
+  /// HTTP clients and proxies sometimes expose multiple `Set-Cookie` headers as
+  /// one comma-separated string. A plain `split(',')` is incorrect because
+  /// `Expires` dates and quoted values may contain commas. This method only
+  /// treats a comma as a separator when it is followed by the start of another
+  /// cookie pair.
   static List<String> splitSetCookie(String cookies) {
     final result = <String>[];
     int pos = 0;

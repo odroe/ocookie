@@ -1,5 +1,5 @@
 name: ocookie
-description: Cookie and Set-Cookie parser and serializer.
+description: HTTP Cookie and Set-Cookie parser, serializer, and cookie jar primitives for Dart and Flutter clients.
 repository: https://github.com/odroe/ocookie
 funding:
   - https://github.com/sponsors/medz
