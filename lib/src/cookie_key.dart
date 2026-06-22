@@ -1,7 +1,19 @@
+/// @docImport 'cookie_jar.dart';
+library;
+
 import 'stored_cookie.dart';
 
-/// Identity used to replace and delete cookies in a store.
+/// Identity used to replace and delete stored cookies.
+///
+/// A cookie is not identified by name alone. User agents can store multiple
+/// cookies with the same name when they differ by domain, path, or host-only
+/// state. [CookieStore] implementations should use this key, or an equivalent
+/// tuple, when replacing and deleting cookies.
 final class CookieKey {
+  /// Creates a cookie identity from normalized cookie fields.
+  ///
+  /// The values are expected to match the corresponding fields on a
+  /// [StoredCookie].
   const CookieKey({
     required this.name,
     required this.domain,
@@ -9,19 +21,22 @@ final class CookieKey {
     required this.hostOnly,
   });
 
-  /// Cookie name.
+  /// The cookie name.
   final String name;
 
-  /// Normalized domain used for matching.
+  /// The normalized domain used for matching.
   final String domain;
 
-  /// Effective path used for matching.
+  /// The effective path used for matching.
   final String path;
 
   /// Whether the cookie is scoped to one host.
   final bool hostOnly;
 
   /// Creates a key for [cookie].
+  ///
+  /// This is the identity used by [MemoryCookieStore] and by [CookieJar] when
+  /// deciding whether a new cookie replaces an existing one.
   factory CookieKey.fromStoredCookie(StoredCookie cookie) {
     return CookieKey(
       name: cookie.cookie.name,
